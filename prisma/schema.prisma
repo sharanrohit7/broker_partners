@@ -1,147 +1,100 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Broker Configuration Table
 model Broker {
-  id          String   @id @default(cuid())
-  name        String   @unique // "zerodha", "angel_one", "icici", etc.
-  displayName String   @map("display_name")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  // Authentication Configuration
-  authMethod  String   @map("auth_method") // "email_password", "api_key", "oauth", "custom"
-  authConfig  Json     @map("auth_config") // JSON config for auth requirements
-  
-  // API Configuration
-  baseUrl     String   @map("base_url")
-  apiVersion  String?  @map("api_version")
-  headers     Json     // Default headers required
-  
-  // Token Configuration
-  tokenTypes  Json     @map("token_types") // Array of token types needed
-  tokenRefreshConfig Json @map("token_refresh_config")
-  
-  // Rate Limiting
-  rateLimit   Json?    @map("rate_limit")
-  
-  // Broker-specific metadata
-  metadata    Json?    // Any additional broker-specific config
-  
-  // Relations
-  userCredentials UserBrokerCredential[]
-  orders         Order[]
-  requestLogs    RequestLog[]
-  
+  id                 String                 @id @default(cuid())
+  name               String                 @unique
+  displayName        String                 @map("display_name")
+  isActive           Boolean                @default(true) @map("is_active")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+  authMethod         String                 @map("auth_method")
+  authConfig         Json                   @map("auth_config")
+  baseUrl            String                 @map("base_url")
+  apiVersion         String?                @map("api_version")
+  headers            Json
+  tokenTypes         Json                   @map("token_types")
+  tokenRefreshConfig Json                   @map("token_refresh_config")
+  rateLimit          Json?                  @map("rate_limit")
+  metadata           Json?
+  orders             Order[]
+  requestLogs        RequestLog[]
+  userCredentials    UserBrokerCredential[]
+
   @@map("brokers")
 }
 
-// User Broker Credentials
 model UserBrokerCredential {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id") // External user ID from your platform
-  brokerId  String   @map("broker_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  // Credential data (encrypted)
-  credentials Json // Encrypted credentials based on broker's auth method
-  
-  // Token storage
-  tokens      Json? // Current active tokens
-  
-  // Status
-  isActive    Boolean @default(true) @map("is_active")
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  brokerId    String    @map("broker_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  credentials Json
+  tokens      Json?
+  isActive    Boolean   @default(true) @map("is_active")
   lastUsedAt  DateTime? @map("last_used_at")
-  
-  // Relations
-  broker      Broker @relation(fields: [brokerId], references: [id], onDelete: Cascade)
   orders      Order[]
-  
+  broker      Broker    @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+
   @@unique([userId, brokerId])
   @@map("user_broker_credentials")
 }
 
-// Orders Table
 model Order {
-  id              String   @id @default(cuid())
-  requestId       String   @unique @map("request_id") // x-basktre-request-id
-  userId          String   @map("user_id")
-  brokerId        String   @map("broker_id")
-  credentialId    String   @map("credential_id")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
-  // Standard Order Details
-  symbol          String
-  exchange        String
-  orderType       String   @map("order_type") // "buy", "sell"
-  productType     String   @map("product_type") // "intraday", "delivery", "marginal"
-  quantity        Int
-  price           Decimal?
-  triggerPrice    Decimal? @map("trigger_price")
-  validity        String?  // "DAY", "IOC", "GTD", etc.
-  
-  // Broker-specific order ID
-  brokerOrderId   String?  @map("broker_order_id")
-  
-  // Order Status
-  status          String   @default("pending") // "pending", "placed", "executed", "cancelled", "rejected"
-  statusMessage   String?  @map("status_message")
-  
-  // Execution Details
-  executedQuantity Int?    @default(0) @map("executed_quantity")
-  executedPrice    Decimal? @map("executed_price")
-  executedAt       DateTime? @map("executed_at")
-  
-  // Broker-specific metadata
-  brokerMetadata  Json?    @map("broker_metadata")
-  
-  // Relations
-  broker          Broker @relation(fields: [brokerId], references: [id])
-  credential      UserBrokerCredential @relation(fields: [credentialId], references: [id])
-  requestLogs     RequestLog[]
-  
+  id               String               @id @default(cuid())
+  requestId        String               @unique @map("request_id")
+  userId           String               @map("user_id")
+  brokerId         String               @map("broker_id")
+  credentialId     String               @map("credential_id")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  symbol           String
+  exchange         String
+  orderType        String               @map("order_type")
+  productType      String               @map("product_type")
+  quantity         Int
+  price            Decimal?
+  triggerPrice     Decimal?             @map("trigger_price")
+  validity         String?
+  brokerOrderId    String?              @map("broker_order_id")
+  status           String               @default("pending")
+  statusMessage    String?              @map("status_message")
+  executedQuantity Int?                 @default(0) @map("executed_quantity")
+  executedPrice    Decimal?             @map("executed_price")
+  executedAt       DateTime?            @map("executed_at")
+  brokerMetadata   Json?                @map("broker_metadata")
+  broker           Broker               @relation(fields: [brokerId], references: [id])
+  credential       UserBrokerCredential @relation(fields: [credentialId], references: [id])
+  requestLogs      RequestLog[]
+
   @@map("orders")
 }
 
-// Request Logs Table
 model RequestLog {
-  id          String   @id @default(cuid())
-  requestId   String   @map("request_id") // x-basktre-request-id
-  brokerId    String?  @map("broker_id")
-  orderId     String?  @map("order_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  
-  // Request Details
-  method      String
-  endpoint    String
-  headers     Json?
-  payload     Json?
-  
-  // Response Details
-  statusCode  Int?     @map("status_code")
-  response    Json?
-  responseTime Int?    @map("response_time") // in milliseconds
-  
-  // Log Level
-  level       String   // "info", "error", "warn", "debug"
-  message     String?
-  error       Json?    // Error details if any
-  
-  // Relations
-  broker      Broker?  @relation(fields: [brokerId], references: [id])
-  order       Order?   @relation(fields: [orderId], references: [id])
-  
+  id           String   @id @default(cuid())
+  requestId    String   @map("request_id")
+  brokerId     String?  @map("broker_id")
+  orderId      String?  @map("order_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  method       String
+  endpoint     String
+  headers      Json?
+  payload      Json?
+  statusCode   Int?     @map("status_code")
+  response     Json?
+  responseTime Int?     @map("response_time")
+  level        String
+  message      String?
+  error        Json?
+  broker       Broker?  @relation(fields: [brokerId], references: [id])
+  order        Order?   @relation(fields: [orderId], references: [id])
+
   @@map("request_logs")
 }

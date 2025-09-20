@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+
 import { logHealthCheck } from '../core/monitoring';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
